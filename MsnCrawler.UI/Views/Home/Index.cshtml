@@ -1,0 +1,153 @@
+﻿@{
+    ViewData["Title"] = "Anasayfa";
+}
+@model List<NewsModel>
+
+<div class="row">
+    <div class="col-md-12 ">
+        <button class="btn btn-outline-secondary" style="float:right;" onclick="graphicsOnOff(this);"><i class="material-icons">visibility_off</i> Grafiği Gizle</button>
+    </div>
+</div>
+<div class="row" id="graphichs">
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="material-icons">pie_chart</i> Haberlerin Kurumlara Olan Dağılımı</h5>
+                <hr />
+            </div>
+            <div class="card-body">
+
+                <div id="pieCompanyCount" style="height:350px"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+<script type="text/javascript">
+    google.charts.load("current", { packages: ["corechart"] });
+    google.charts.setOnLoadCallback(drawChart);
+    function graphicsOnOff(element) {
+        if (!$("#graphichs").is(':visible')) {
+            $(element).html(`<i class="material-icons">visibility_off</i> Grafiği Gizle`);
+            $("#graphichs").show("slow");
+        }
+        else {
+
+            $(element).html(`<i class="material-icons">visibility_on</i> Grafiği Aç`);
+            $("#graphichs").hide("slow");
+        }
+    }
+    function drawChart() {
+
+        $.get("/Home/GetCompanyCount").done(result => {
+
+            var res = [
+                ['Task', 'Hours per Day'],
+            ];
+            result.forEach(item => {
+                res.push([item.name, item.count]);
+            });
+
+            var data = google.visualization.arrayToDataTable(res);
+
+            var options = {
+                //title: 'Haberlerin Kurumlara Olan Dağılımı',
+                is3D: true,
+                //backgroundColor:'#eee'
+            };
+
+            var chart = new google.visualization.PieChart(document.getElementById('pieCompanyCount'));
+            chart.draw(data, options);
+        })
+
+
+    }
+</script>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="alert alert-info" role="alert">
+            <i class="material-icons text-light">info</i> <b id="time" style="font-size:18px;"></b> saniye sonra yeni haberlere bakılacak !
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3> <i class="material-icons">fiber_new</i> Yeni gelen haberler </h3>
+                <hr />
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="text-center">#</th>
+                            <th>Haber Başlığı</th>
+                            <th>Kurum</th>
+
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var news in Model)
+                        {
+                            <tr>
+                                <td class="text-center">@news.Id</td>
+                                <td>@news.Title <a href="@news.DetailLink" target="_blank"> <i class="material-icons">info</i> </a </td>
+                                <td>@news.SourceName</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="material-icons">find_in_page</i> @DateTime.Now.ToString("dd.MM.yyyy hh:mm") - tarama sonucu </h3>
+                <hr />
+            </div>
+            <div class="card-body">
+
+                <table class="table">
+                    <thead>
+                        <tr>
+                            @*<th class="text-center">#</th>*@
+                            <th>Kurum</th>
+                            <th>Toplam Url Sayısı</th>
+                            <th>Yeni Gelen Url Sayısı</th>
+                            <th>Aynı Olan Url Sayısı</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.GroupBy(p => p.SourceName).Select(grp => new { Key = grp.Key, Items = grp.ToList() }).ToList())
+                        {
+                            <tr>
+                                <td>@item.Key</td>
+                                <td>@item.Items.Count</td>
+                                <td>@item.Items.Where(p => p.SomeCount < 1).Count()</td>
+                                <td>@( item.Items.Count - item.Items.Where(p => p.SomeCount < 1).Count())</td>
+                            </tr>
+
+                        }
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
+<script>
+    const refreshTime = moment().add(5, 'm');
+
+    setInterval(() => {
+        var duration = moment.duration(refreshTime.diff(new Date()));
+        var time = "0" + duration._data.minutes + ":" + duration._data.seconds
+        $("#time").text(time);
+    },1000)
+    setTimeout(() => window.location.reload(), 300000)
+</script>
